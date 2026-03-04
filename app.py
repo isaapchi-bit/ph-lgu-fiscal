@@ -6,122 +6,48 @@ st.set_page_config(page_title="PH LGU Fiscal Dashboard", layout="wide")
 
 st.markdown("""
 <style>
-/* ── Global font & background ───────────────────────────────────────── */
-html, body, [class*="css"] {
-    font-family: 'Inter', 'Segoe UI', sans-serif;
-}
+/* ── Fine-tune dark theme ───────────────────────────────────────── */
 
-/* ── Sidebar ─────────────────────────────────────────────────────────── */
-[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+/* Metric cards: slightly lighter card surface */
+[data-testid="metric-container"] {
+    background: #16213e;
+    border: 1px solid #2a2a4a;
+    border-radius: 12px;
+    padding: 1.2rem 1.4rem !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
-[data-testid="stSidebar"] * {
-    color: #e2e8f0 !important;
-}
-[data-testid="stSidebar"] .stSelectbox label,
-[data-testid="stSidebar"] .stMultiSelect label,
-[data-testid="stSidebar"] .stSlider label,
-[data-testid="stSidebar"] .stRadio label,
-[data-testid="stSidebar"] h2 {
-    color: #94a3b8 !important;
-    font-size: 0.78rem;
+[data-testid="metric-container"] [data-testid="stMetricLabel"] {
+    font-size: 0.75rem !important;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-}
-[data-testid="stSidebar"] [data-baseweb="select"] > div {
-    background-color: #1e3a5f !important;
-    border: 1px solid #334155 !important;
-    border-radius: 8px !important;
-    color: #f1f5f9 !important;
-}
-[data-testid="stSidebar"] [data-baseweb="select"] span {
-    color: #f1f5f9 !important;
-}
-[data-testid="stSidebar"] hr {
-    border-color: #334155 !important;
-}
-[data-testid="stSidebar"] [data-testid="stSidebarNav"] {
-    padding-top: 1.5rem;
-}
-
-/* ── Main area ────────────────────────────────────────────────────────── */
-[data-testid="stAppViewContainer"] > .main {
-    background-color: #f8fafc;
-}
-[data-testid="block-container"] {
-    padding-top: 2rem;
-}
-
-/* ── Page title banner ────────────────────────────────────────────────── */
-h1 {
-    background: linear-gradient(90deg, #0f172a 0%, #1e40af 100%);
-    color: #ffffff !important;
-    padding: 0.75rem 1.5rem !important;
-    border-radius: 12px;
-    font-size: 1.6rem !important;
-    font-weight: 700 !important;
-    letter-spacing: -0.01em;
-    margin-bottom: 0.25rem !important;
-}
-
-/* subheader (scope line) */
-h2:first-of-type {
-    color: #475569 !important;
-    font-size: 1rem !important;
-    font-weight: 500 !important;
-    margin-top: 0 !important;
-}
-
-/* ── Metric cards ─────────────────────────────────────────────────────── */
-[data-testid="metric-container"] {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1.2rem 1.4rem !important;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
-}
-[data-testid="metric-container"] [data-testid="stMetricLabel"] {
-    color: #64748b !important;
-    font-size: 0.78rem !important;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    opacity: 0.7;
 }
 [data-testid="metric-container"] [data-testid="stMetricValue"] {
-    color: #0f172a !important;
-    font-size: 1.6rem !important;
+    font-size: 1.7rem !important;
     font-weight: 700 !important;
 }
 
-/* ── Section headings ─────────────────────────────────────────────────── */
+/* Section headings: accent left border */
 h2, h3 {
-    color: #1e293b !important;
-    font-weight: 700 !important;
-    border-left: 4px solid #2563eb;
+    border-left: 4px solid #e05c5c;
     padding-left: 0.6rem !important;
 }
 
-/* ── Dataframe ────────────────────────────────────────────────────────── */
-[data-testid="stDataFrame"] {
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+/* Sidebar filter labels: muted uppercase */
+[data-testid="stSidebar"] label p {
+    font-size: 0.75rem !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.65;
 }
 
-/* ── Plotly chart wrapper ────────────────────────────────────────────── */
-.stPlotlyChart {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+/* Chart and dataframe wrappers: subtle card border */
+.stPlotlyChart, [data-testid="stDataFrame"] {
+    border: 1px solid #2a2a4a;
     border-radius: 12px;
-    padding: 1rem;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
-}
-
-/* ── Toggle / radio ───────────────────────────────────────────────────── */
-[data-testid="stSidebar"] [data-baseweb="radio"] label span {
-    color: #cbd5e1 !important;
+    overflow: hidden;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -292,16 +218,17 @@ fig = px.bar(
     color_discrete_sequence=color_seq,
 )
 fig.update_layout(
-    xaxis=dict(tickmode="linear", dtick=1, gridcolor="#f1f5f9"),
+    xaxis=dict(tickmode="linear", dtick=1, gridcolor="#2a2a4a", color="#c0c0d0"),
     yaxis_tickformat=",.0f" if not show_pct else ".1f",
-    yaxis=dict(gridcolor="#f1f5f9"),
+    yaxis=dict(gridcolor="#2a2a4a", color="#c0c0d0"),
     legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1.01,
-                bgcolor="rgba(255,255,255,0.8)", bordercolor="#e2e8f0", borderwidth=1),
+                bgcolor="rgba(22,33,62,0.85)", bordercolor="#2a2a4a", borderwidth=1,
+                font=dict(color="#f0f0f0")),
     height=480,
-    plot_bgcolor="#ffffff",
-    paper_bgcolor="#ffffff",
-    font=dict(family="Inter, Segoe UI, sans-serif", color="#1e293b"),
-    title_font=dict(size=16, color="#0f172a", family="Inter, Segoe UI, sans-serif"),
+    plot_bgcolor="#1a1a2e",
+    paper_bgcolor="#1a1a2e",
+    font=dict(family="sans-serif", color="#f0f0f0"),
+    title_font=dict(size=16, color="#f0f0f0"),
     margin=dict(t=50, r=20, b=40, l=60),
 )
 if show_pct:
