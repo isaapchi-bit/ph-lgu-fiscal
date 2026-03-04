@@ -6,48 +6,57 @@ st.set_page_config(page_title="PH LGU Fiscal Dashboard", layout="wide")
 
 st.markdown("""
 <style>
-/* ── Fine-tune dark theme ───────────────────────────────────────── */
-
-/* Metric cards: slightly lighter card surface */
+/* ── Metric cards ─────────────────────────────────────────────────── */
 [data-testid="metric-container"] {
-    background: #16213e;
-    border: 1px solid #2a2a4a;
-    border-radius: 12px;
-    padding: 1.2rem 1.4rem !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    background: #ffffff;
+    border: none;
+    border-radius: 14px;
+    padding: 1.4rem 1.6rem !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
 }
 [data-testid="metric-container"] [data-testid="stMetricLabel"] {
-    font-size: 0.75rem !important;
+    color: #718096 !important;
+    font-size: 0.72rem !important;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    opacity: 0.7;
+    letter-spacing: 0.07em;
 }
 [data-testid="metric-container"] [data-testid="stMetricValue"] {
-    font-size: 1.7rem !important;
+    color: #1a202c !important;
+    font-size: 1.8rem !important;
     font-weight: 700 !important;
+    line-height: 1.2;
 }
 
-/* Section headings: accent left border */
+/* ── Section headings ─────────────────────────────────────────────── */
 h2, h3 {
-    border-left: 4px solid #e05c5c;
-    padding-left: 0.6rem !important;
+    color: #1a202c !important;
+    font-weight: 700 !important;
+    font-size: 1.05rem !important;
 }
 
-/* Sidebar filter labels: muted uppercase */
+/* ── Chart card ───────────────────────────────────────────────────── */
+.stPlotlyChart {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 0.5rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+
+/* ── Dataframe card ───────────────────────────────────────────────── */
+[data-testid="stDataFrame"] {
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+
+/* ── Sidebar labels ───────────────────────────────────────────────── */
 [data-testid="stSidebar"] label p {
-    font-size: 0.75rem !important;
+    font-size: 0.72rem !important;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    opacity: 0.65;
-}
-
-/* Chart and dataframe wrappers: subtle card border */
-.stPlotlyChart, [data-testid="stDataFrame"] {
-    border: 1px solid #2a2a4a;
-    border-radius: 12px;
-    overflow: hidden;
+    letter-spacing: 0.07em;
+    color: #a0aec0 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -218,17 +227,17 @@ fig = px.bar(
     color_discrete_sequence=color_seq,
 )
 fig.update_layout(
-    xaxis=dict(tickmode="linear", dtick=1, gridcolor="#2a2a4a", color="#c0c0d0"),
+    xaxis=dict(tickmode="linear", dtick=1, gridcolor="#edf2f7", color="#718096"),
     yaxis_tickformat=",.0f" if not show_pct else ".1f",
-    yaxis=dict(gridcolor="#2a2a4a", color="#c0c0d0"),
+    yaxis=dict(gridcolor="#edf2f7", color="#718096"),
     legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1.01,
-                bgcolor="rgba(22,33,62,0.85)", bordercolor="#2a2a4a", borderwidth=1,
-                font=dict(color="#f0f0f0")),
+                bgcolor="rgba(255,255,255,0.9)", bordercolor="#e2e8f0", borderwidth=1,
+                font=dict(color="#2d3748")),
     height=480,
-    plot_bgcolor="#1a1a2e",
-    paper_bgcolor="#1a1a2e",
-    font=dict(family="sans-serif", color="#f0f0f0"),
-    title_font=dict(size=16, color="#f0f0f0"),
+    plot_bgcolor="#ffffff",
+    paper_bgcolor="#ffffff",
+    font=dict(family="sans-serif", color="#2d3748"),
+    title_font=dict(size=15, color="#1a202c"),
     margin=dict(t=50, r=20, b=40, l=60),
 )
 if show_pct:
