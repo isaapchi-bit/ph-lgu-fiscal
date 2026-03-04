@@ -78,6 +78,18 @@ sel_lgu = st.sidebar.selectbox("LGU", ["— All in selection —"] + lgus)
 
 st.sidebar.divider()
 
+all_types = sorted(in_province["lgutype_n"].dropna().unique())
+sel_types = st.sidebar.multiselect("LGU Type", all_types, default=all_types)
+
+all_years = sorted(df["year"].dropna().unique())
+year_range = st.sidebar.select_slider(
+    "Year range",
+    options=all_years,
+    value=(min(all_years), max(all_years)),
+)
+
+st.sidebar.divider()
+
 view = st.sidebar.radio("View", ["By Sector", "By Economic Classification"])
 show_pct = st.sidebar.toggle("Show as % of total")
 
@@ -86,6 +98,13 @@ if sel_lgu != "— All in selection —":
     filtered = in_province[in_province["lgu"] == sel_lgu]
 else:
     filtered = in_province
+
+if sel_types:
+    filtered = filtered[filtered["lgutype_n"].isin(sel_types)]
+
+filtered = filtered[
+    (filtered["year"] >= year_range[0]) & (filtered["year"] <= year_range[1])
+]
 
 # ── Scope label ──────────────────────────────────────────────────────────────
 if sel_lgu != "— All in selection —":
@@ -173,3 +192,21 @@ for col in cat_cols:
         display[col] = display[col].map(lambda x: f"₱{x:,.0f}")
 
 st.dataframe(display.set_index("year").T, use_container_width=True)
+
+# ── LGU ranking table (only when multiple LGUs in scope) ─────────────────────
+if sel_lgu == "— All in selection —" and n_lgus > 1:
+    st.subheader(f"LGU Rankings — {year_range[0]}–{year_range[1]}")
+
+    rank_cols = ["lgu", "province", "region", "lgutype_n", "year", "aa_total"]
+    rank = (
+        filtered[rank_cols]
+        .dropna(subset=["aa_total"])
+        .groupby(["lgu", "province", "region", "lgutype_n"], as_index=False)["aa_total"]
+        .sum()
+        .sort_values("aa_total", ascending=False)
+        .reset_index(drop=True)
+    )
+    rank.index += 1
+    rank["aa_total"] = rank["aa_total"].map(lambda x: f"₱{x:,.0f}")
+    rank.columns = ["LGU", "Province", "Region", "Type", "Total Appropriations"]
+    st.dataframe(rank, use_container_width=True)
