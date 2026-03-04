@@ -2,104 +2,174 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="PH LGU Fiscal Explorer", layout="wide")
+st.set_page_config(page_title="PH LGU Fiscal Dashboard", layout="wide")
+
+SECTORS = {
+    "gen_serv":   "General Services",
+    "educ":       "Education",
+    "health":     "Health",
+    "labor":      "Labor & Employment",
+    "house":      "Housing & Community Dev.",
+    "social":     "Social Services",
+    "econ_serv":  "Economic Services",
+    "other_purp": "Other Purposes",
+    "ldrrmf":     "LDRRMF",
+    "devfund":    "Development Fund",
+    "others":     "Others",
+}
+
+ECON = {
+    "aa_ps":               "Personal Services (PS)",
+    "aa_capital_outlays":  "Capital Outlays (CO)",
+    "aa_mooe":             "MOOE",
+    "aa_unc":              "Unclassified",
+    "aa_amort":            "Amortization",
+    "aa_fin":              "Financial Expenses",
+}
+
+SECTOR_COLORS = px.colors.qualitative.Safe
+ECON_COLORS = px.colors.qualitative.Pastel
+
 
 @st.cache_data
 def load_data():
     df = pd.read_csv("lgu_fiscal_panel.csv", low_memory=False)
+
+    # Build one column per sector for the row's observation year
+    for key in SECTORS:
+        vals = pd.Series(float("nan"), index=df.index)
+        for yr in range(2015, 2024):
+            col = f"aa_s_{key}_{yr}"
+            if col in df.columns:
+                mask = df["year"] == yr
+                vals.loc[mask] = df.loc[mask, col]
+        df[f"sec_{key}"] = vals.fillna(0)
+
+    # Fill econ columns with 0 where missing
+    for col in ECON:
+        df[col] = df[col].fillna(0)
+
     return df
+
 
 df = load_data()
 
-st.title("Philippine LGU Fiscal Data Explorer")
-st.markdown("Explore local government unit appropriations data across regions, provinces, and years.")
-
-# Sidebar filters
+# ── Sidebar ─────────────────────────────────────────────────────────────────
 st.sidebar.header("Filters")
 
 regions = sorted(df["region"].dropna().unique())
-selected_region = st.sidebar.selectbox("Region", ["All"] + list(regions))
+sel_region = st.sidebar.selectbox("Region", ["— All Regions —"] + regions)
 
-if selected_region != "All":
-    filtered = df[df["region"] == selected_region]
+if sel_region != "— All Regions —":
+    in_region = df[df["region"] == sel_region]
 else:
-    filtered = df.copy()
+    in_region = df
 
-provinces = sorted(filtered["province"].dropna().unique())
-selected_province = st.sidebar.selectbox("Province", ["All"] + list(provinces))
+provinces = sorted(in_region["province"].dropna().unique())
+sel_province = st.sidebar.selectbox("Province", ["— All Provinces —"] + provinces)
 
-if selected_province != "All":
-    filtered = filtered[filtered["province"] == selected_province]
+if sel_province != "— All Provinces —":
+    in_province = in_region[in_region["province"] == sel_province]
+else:
+    in_province = in_region
 
-lgu_types = sorted(filtered["lgutype_n"].dropna().unique())
-selected_type = st.sidebar.multiselect("LGU Type", lgu_types, default=lgu_types)
-if selected_type:
-    filtered = filtered[filtered["lgutype_n"].isin(selected_type)]
+lgus = sorted(in_province["lgu"].dropna().unique())
+sel_lgu = st.sidebar.selectbox("LGU", ["— All in selection —"] + lgus)
 
-years = sorted(filtered["year"].dropna().unique())
-year_range = st.sidebar.select_slider("Year Range", options=years, value=(min(years), max(years)))
-filtered = filtered[(filtered["year"] >= year_range[0]) & (filtered["year"] <= year_range[1])]
+st.sidebar.divider()
 
-# Summary metrics
-st.subheader("Summary")
-col1, col2, col3 = st.columns(3)
-col1.metric("LGUs", filtered["lgu"].nunique())
-col2.metric("Years", filtered["year"].nunique())
-col3.metric("Records", len(filtered))
+view = st.sidebar.radio("View", ["By Sector", "By Economic Classification"])
+show_pct = st.sidebar.toggle("Show as % of total")
 
-# Spending by sector over time
-st.subheader("Average Annual Appropriations by Sector")
+# ── Filter ───────────────────────────────────────────────────────────────────
+if sel_lgu != "— All in selection —":
+    filtered = in_province[in_province["lgu"] == sel_lgu]
+else:
+    filtered = in_province
 
-sector_cols = {
-    "Education": "aa_educ",
-    "Health": "aa_health",
-    "Social Services": "aa_social",
-    "General Services": "aa_gen_serv",
-    "Economic Services": "aa_sh_econ_serv",
-}
+# ── Scope label ──────────────────────────────────────────────────────────────
+if sel_lgu != "— All in selection —":
+    scope = sel_lgu
+elif sel_province != "— All Provinces —":
+    scope = f"All LGUs — {sel_province}"
+elif sel_region != "— All Regions —":
+    scope = f"All LGUs — {sel_region}"
+else:
+    scope = "All LGUs — National"
 
-available = {k: v for k, v in sector_cols.items() if v in filtered.columns}
+# ── Header metrics ───────────────────────────────────────────────────────────
+st.title("PH LGU Fiscal Dashboard")
+st.subheader(scope)
 
-if available:
-    trend = (
-        filtered.groupby("year")[list(available.values())]
-        .mean()
-        .reset_index()
-        .rename(columns={v: k for k, v in available.items()})
-    )
-    trend_melted = trend.melt(id_vars="year", var_name="Sector", value_name="Average Appropriation")
-    fig = px.line(
-        trend_melted,
-        x="year",
-        y="Average Appropriation",
-        color="Sector",
-        markers=True,
-        title="Average Appropriations by Sector (Selected LGUs)",
-    )
-    st.plotly_chart(fig, use_container_width=True)
+total_approp = filtered["aa_total"].sum()
+n_lgus = filtered["lgu"].nunique()
+years_present = sorted(filtered["year"].unique())
 
-# Total appropriations per capita
-st.subheader("Per Capita Total Appropriations")
+c1, c2, c3 = st.columns(3)
+c1.metric("Total Appropriations (all years)", f"₱{total_approp:,.0f}")
+c2.metric("LGUs in selection", n_lgus)
+c3.metric("Years covered", f"{min(years_present)}–{max(years_present)}" if years_present else "—")
 
-if "aa_pc_total_all" in filtered.columns:
-    pc_data = filtered.dropna(subset=["aa_pc_total_all"])
-    if not pc_data.empty:
-        fig2 = px.box(
-            pc_data,
-            x="year",
-            y="aa_pc_total_all",
-            color="lgutype_n",
-            title="Per Capita Appropriations by Year and LGU Type",
-            labels={"aa_pc_total_all": "Per Capita Appropriation (PHP)", "year": "Year", "lgutype_n": "LGU Type"},
-        )
-        st.plotly_chart(fig2, use_container_width=True)
+# ── Aggregate by year ─────────────────────────────────────────────────────────
+if view == "By Sector":
+    raw_cols = {f"sec_{k}": v for k, v in SECTORS.items()}
+    chart_title = "Appropriations by Sector"
+    color_seq = SECTOR_COLORS
+else:
+    raw_cols = ECON
+    chart_title = "Appropriations by Economic Classification"
+    color_seq = ECON_COLORS
 
-# LGU ranking table
-st.subheader("LGU Appropriation Summary (Latest Year)")
+agg = (
+    filtered
+    .groupby("year")[list(raw_cols.keys())]
+    .sum()
+    .reset_index()
+    .rename(columns=raw_cols)
+)
 
-latest_year = filtered["year"].max()
-latest = filtered[filtered["year"] == latest_year][["lgu", "province", "region", "lgutype_n", "aa_total"]].dropna(subset=["aa_total"])
-latest = latest.sort_values("aa_total", ascending=False).reset_index(drop=True)
-latest["aa_total"] = latest["aa_total"].apply(lambda x: f"₱{x:,.0f}")
-latest.columns = ["LGU", "Province", "Region", "Type", f"Total Appropriation ({latest_year})"]
-st.dataframe(latest, use_container_width=True)
+cat_cols = list(raw_cols.values())
+
+if show_pct:
+    row_totals = agg[cat_cols].sum(axis=1).replace(0, float("nan"))
+    agg[cat_cols] = agg[cat_cols].div(row_totals, axis=0).mul(100)
+
+# ── Chart ────────────────────────────────────────────────────────────────────
+melted = agg.melt(id_vars="year", value_vars=cat_cols, var_name="Category", value_name="Value")
+melted["Value"] = melted["Value"].fillna(0)
+
+y_label = "Share of total (%)" if show_pct else "Appropriations (PHP)"
+
+fig = px.bar(
+    melted,
+    x="year",
+    y="Value",
+    color="Category",
+    barmode="stack",
+    title=chart_title,
+    labels={"Value": y_label, "year": "Year"},
+    color_discrete_sequence=color_seq,
+)
+fig.update_layout(
+    xaxis=dict(tickmode="linear", dtick=1),
+    yaxis_tickformat=",.0f" if not show_pct else ".1f",
+    legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1.01),
+    height=480,
+)
+if show_pct:
+    fig.update_yaxes(ticksuffix="%", range=[0, 100])
+
+st.plotly_chart(fig, use_container_width=True)
+
+# ── Table ─────────────────────────────────────────────────────────────────────
+st.subheader("Annual Breakdown")
+
+display = agg.copy()
+display["year"] = display["year"].astype(str)
+for col in cat_cols:
+    if show_pct:
+        display[col] = display[col].map(lambda x: f"{x:.1f}%")
+    else:
+        display[col] = display[col].map(lambda x: f"₱{x:,.0f}")
+
+st.dataframe(display.set_index("year").T, use_container_width=True)
