@@ -245,6 +245,72 @@ if show_pct:
 
 st.plotly_chart(fig, use_container_width=True)
 
+# ── % Share Breakdown ─────────────────────────────────────────────────────────
+st.subheader("% Share Breakdown")
+
+pct_agg = agg.copy()
+if not show_pct:  # convert to % if main chart is in absolute values
+    row_totals = pct_agg[cat_cols].sum(axis=1).replace(0, float("nan"))
+    pct_agg[cat_cols] = pct_agg[cat_cols].div(row_totals, axis=0).mul(100)
+
+pct_melted = pct_agg.melt(id_vars="year", value_vars=cat_cols, var_name="Category", value_name="Pct")
+pct_melted["Pct"] = pct_melted["Pct"].fillna(0)
+
+col_bar, col_donut = st.columns([3, 2])
+
+with col_bar:
+    fig_pct = px.bar(
+        pct_melted,
+        x="year",
+        y="Pct",
+        color="Category",
+        barmode="stack",
+        title="100% Stacked — Share per Year",
+        labels={"Pct": "Share (%)", "year": "Year"},
+        color_discrete_sequence=color_seq,
+    )
+    fig_pct.update_layout(
+        xaxis=dict(tickmode="linear", dtick=1, gridcolor="#edf2f7", color="#718096"),
+        yaxis=dict(gridcolor="#edf2f7", color="#718096", range=[0, 100]),
+        yaxis_tickformat=".1f",
+        legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1.01,
+                    bgcolor="rgba(255,255,255,0.9)", bordercolor="#e2e8f0", borderwidth=1,
+                    font=dict(color="#2d3748")),
+        height=380,
+        plot_bgcolor="#ffffff",
+        paper_bgcolor="#ffffff",
+        font=dict(family="sans-serif", color="#2d3748"),
+        title_font=dict(size=14, color="#1a202c"),
+        margin=dict(t=50, r=20, b=40, l=60),
+    )
+    fig_pct.update_yaxes(ticksuffix="%")
+    st.plotly_chart(fig_pct, use_container_width=True)
+
+with col_donut:
+    donut_vals = pct_agg[cat_cols].mean()
+    fig_donut = px.pie(
+        names=donut_vals.index,
+        values=donut_vals.values,
+        hole=0.45,
+        title=f"Avg Share — {year_range[0]}–{year_range[1]}",
+        color_discrete_sequence=color_seq,
+    )
+    fig_donut.update_traces(
+        textposition="inside",
+        textinfo="percent",
+        hovertemplate="<b>%{label}</b><br>%{percent}<extra></extra>",
+    )
+    fig_donut.update_layout(
+        height=380,
+        paper_bgcolor="#ffffff",
+        font=dict(family="sans-serif", color="#2d3748"),
+        title_font=dict(size=14, color="#1a202c"),
+        legend=dict(orientation="v", yanchor="middle", y=0.5,
+                    font=dict(size=10, color="#2d3748")),
+        margin=dict(t=50, r=10, b=10, l=10),
+    )
+    st.plotly_chart(fig_donut, use_container_width=True)
+
 # ── Table ─────────────────────────────────────────────────────────────────────
 st.subheader("Annual Breakdown")
 
